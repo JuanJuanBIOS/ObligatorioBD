@@ -247,41 +247,40 @@ if not exists(select * from Vehiculos where matricula=@vehiculo)
 	return -1
 	end
 -- Se chequea que exista el cliente en la base de datos, y si no existe se muestra el error
-if not exists(select * from Clientes where documento=@cliente)
+else if not exists(select * from Clientes where documento=@cliente)
 	begin
 	print 'El cliente no existe en la base de datos'
 	return -2
 	end
 -- Se chequea que la fecha de inicio no sea anterior al dia de hoy
-if (@fechainicio<GETDATE())
+else if (@fechainicio<GETDATE())
 	begin
 	print 'La fecha de inicio no puede ser anterior al día de hoy'
 	return -3
 	end
 -- Se chequea que la fecha de fin sea posterior a la fecha de inicio
-if (@fechainicio>=@fechafin)
+else if (@fechainicio>=@fechafin)
 	begin
 	print 'La fecha de fin debe ser posterior a la fecha de inicio'
 	return -4
 	end
 -- Se chequea que el vehículo que se desea alquilar no se encuentre alquilado en las fechas solicitadas
-if	exists (select * from Alquileres where vehiculo=@vehiculo) and
-	(exists (select * from Alquileres where (@fechafin<=fechafin and @fechafin>=fechainicio)) or
-	exists (select * from Alquileres where (@fechainicio<=fechafin and @fechainicio>=fechainicio)))
+else if	(exists (select * from Alquileres where (Alquileres.vehiculo=@vehiculo and @fechafin<=Alquileres.fechafin and @fechafin>=Alquileres.fechainicio)) or
+	exists (select * from Alquileres where (Alquileres.vehiculo=@vehiculo and @fechainicio<=Alquileres.fechafin and @fechainicio>=Alquileres.fechainicio)))
 	begin
 	-- Se declara la variable auxiliar @tipo y otra @similar para sugerir el vehículo similar que se podría alquilar
 	declare @tipo varchar(10)
 	declare @similar varchar(7)
-		-- Se busca si la matrícula ingresada corresponde a un Auto o a un Utilitario y se le asigna el valor a la variable auxiliar
-		select @tipo = Vehiculos.categoria from Vehiculos where Vehiculos.matricula=@vehiculo
-		-- Si el vehículo que ya está alquilado es de tipo Auto se busca su similar
-		if @tipo='Auto'
+	-- Se busca si la matrícula ingresada corresponde a un Auto o a un Utilitario y se le asigna el valor a la variable auxiliar
+	select @tipo = Vehiculos.categoria from Vehiculos where Vehiculos.matricula=@vehiculo
+	-- Si el vehículo que ya está alquilado es de tipo Auto se busca su similar
+	if @tipo='Auto'
 		begin
 		-- Se le asigna el vehículo similar a la variable creada anteriormente
 			select @similar = Autos.vehiculosimilar from Autos where Autos.matricula=@vehiculo
 		end
-		-- Si el vehículo que ya está alquilado es de tipo Utilitario se busca su similar
-		if @tipo='Utilitario'
+	-- Si el vehículo que ya está alquilado es de tipo Utilitario se busca su similar
+	if @tipo='Utilitario'
 		begin
 		-- Se le asigna el vehículo similar a la variable creada anteriormente
 			select @similar = Utilitarios.vehiculosimilar from Utilitarios where Utilitarios.matricula=@vehiculo
@@ -290,3 +289,52 @@ if	exists (select * from Alquileres where vehiculo=@vehiculo) and
 	print 'Intente con el vehículo similar ' + @similar
 	return -5
 	end
+else
+	begin
+	begin transaction
+	declare @costo float
+	set @costo = DATEDIFF(day,@fechainicio,@fechafin) * (select Vehiculos.costodiario from Vehiculos where Vehiculos.matricula=@vehiculo)
+	insert into Alquileres values (@vehiculo,@cliente,@fechainicio,@fechafin,@costo)
+	if @@ERROR<>0
+			begin
+				rollback transaction
+				print 'No se pudo realizar el alquiler del vehículo'
+				return -5
+			end
+	commit transaction
+	print 'El alquiler se ingresó correctamente. El costo total del mismo es de $' + CONVERT(varchar(10),@costo)
+	return 0
+	end
+
+go
+
+-- Se crea procedimiento para obtener el total recaudado de un vehículo
+create procedure Total_Vehiculo
+-- Se define la variable de entrada al proceso, la cual va a ser la matrícula del vehículo
+@vehiculo varchar(7)
+as
+-- Se chequea que exista la matrícula en la base de datos, y si no existe se muestra el error
+if not exists(select * from Vehiculos where matricula=@vehiculo)
+	begin
+	print 'El vehículo no existe en la base de datos'
+	return -1
+	end
+else
+	begin
+	begin transaction
+	declare @marca varchar(30)
+	declare @modelo varchar(30)
+	declare @recaudado float
+	select @marca = Vehiculos.marca from Vehiculos where Vehiculos.matricula=@vehiculo
+	select @modelo = Vehiculos.modelo from Vehiculos where Vehiculos.matricula=@vehiculo
+	select @recaudado = SUM(Alquileres.costo) from Alquileres where Alquileres.vehiculo=@vehiculo
+	if @@ERROR<>0
+			begin
+				rollback transaction
+				print 'No se pudo realizar el alquiler del vehículo'
+				return -5
+			end
+	commit transaction
+	print 'El vehículo '+@marca+' '+@modelo+', matrícula '+@vehiculo+' ha recaudado un total de $'+CONVERT(varchar(10),@recaudado)
+	return 1
+	end;

@@ -30,3 +30,18 @@ Realizar_Alquiler 'CCC3333', '3155160', '11/25/2017', '12/05/2017'
 Realizar_Alquiler 'CCC3333', '3155160', '12/01/2017', '12/31/2017'
 Realizar_Alquiler 'CCC3333', '3155160', '12/02/2017', '12/12/2017'
 
+-- Prueba de realización de alquiler correctamente
+Realizar_Alquiler 'DDD4444', '1914310', '11/25/2017', '12/05/2017'
+Realizar_Alquiler 'JJJ1010', '2548635', '02/01/2018', '02/04/2018'
+Realizar_Alquiler 'JJJ1010', '3155160', '03/01/2018', '03/15/2018'
+Realizar_Alquiler 'JJJ1010', '1914310', '12/15/2017', '01/15/2018'
+
+-- Prueba total recaudado de un vehículo que no existe
+Total_Vehiculo 'JJJ2020'
+
+-- Prueba total recaudado de un vehículo con un solo alquiler
+Total_Vehiculo 'DDD4444'
+
+-- Prueba total recaudado de un vehículo con más de un alquiler
+Total_Vehiculo 'JJJ1010'
+
