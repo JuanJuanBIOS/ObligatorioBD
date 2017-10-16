@@ -266,7 +266,8 @@ else if (@fechainicio>=@fechafin)
 	end
 -- Se chequea que el vehículo que se desea alquilar no se encuentre alquilado en las fechas solicitadas
 else if	(exists (select * from Alquileres where (Alquileres.vehiculo=@vehiculo and @fechafin<=Alquileres.fechafin and @fechafin>=Alquileres.fechainicio)) or
-	exists (select * from Alquileres where (Alquileres.vehiculo=@vehiculo and @fechainicio<=Alquileres.fechafin and @fechainicio>=Alquileres.fechainicio)))
+	exists (select * from Alquileres where (Alquileres.vehiculo=@vehiculo and @fechainicio<=Alquileres.fechafin and @fechainicio>=Alquileres.fechainicio)) or
+	exists (select * from Alquileres where (Alquileres.vehiculo=@vehiculo and @fechainicio<=Alquileres.fechainicio and @fechafin>=Alquileres.fechafin)))
 	begin
 	-- Se declara la variable auxiliar @tipo y otra @similar para sugerir el vehículo similar que se podría alquilar
 	declare @tipo varchar(10)
@@ -332,9 +333,38 @@ else
 			begin
 				rollback transaction
 				print 'No se pudo realizar el alquiler del vehículo'
-				return -5
+				return -2
 			end
 	commit transaction
 	print 'El vehículo '+@marca+' '+@modelo+', matrícula '+@vehiculo+' ha recaudado un total de $'+CONVERT(varchar(10),@recaudado)
 	return 1
 	end;
+
+go
+
+-- Se crea procedimiento para ver vehículos disponibles por período
+create procedure Disponibles_por_periodo
+-- Se definen las variables de entrada al proceso
+@fechainicio datetime,
+@fechafin datetime
+as
+-- Se chequea que la fecha de fin sea posterior a la fecha de inicio
+if (@fechainicio>=@fechafin)
+	begin
+	print 'La fecha de fin debe ser posterior a la fecha de inicio'
+	return -1
+	end
+else
+	begin
+	-- Se copian en una tabla temporal aquellos vehículos que están alquilados dentro del período seleccionado
+	-- y se seleccionan aquellos vehículos que no se encuentran en dicha tabla
+	select Vehiculos.* into #TablaAux from Vehiculos where Vehiculos.matricula not in 
+		(select Alquileres.vehiculo from Alquileres 
+		where ((@fechainicio<=Alquileres.fechafin and @fechainicio>=Alquileres.fechainicio) or
+				(@fechafin<=Alquileres.fechafin and @fechafin>=Alquileres.fechainicio) or
+				(@fechainicio<=Alquileres.fechainicio and @fechafin>=Alquileres.fechafin)))
+	-- Se traen los datos de las tablas Autos y Utilitarios para completar la consulta
+	select TablaAux2.*, Utilitarios.tipo, Utilitarios.capacidad, Utilitarios.vehiculosimilar as utilitario_similar
+	from (select #TablaAux.*, Autos.anclaje, Autos.vehiculosimilar as auto_similar from #TablaAux left join Autos on #TablaAux.matricula=Autos.matricula)
+	as TablaAux2 left join Utilitarios on TablaAux2.matricula=Utilitarios.matricula
+	end
