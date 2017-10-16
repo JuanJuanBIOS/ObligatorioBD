@@ -52,3 +52,6 @@ Disponibles_por_periodo '12/02/2017', '12/05/2017'
 Disponibles_por_periodo '03/02/2018', '03/31/2018'
 Disponibles_por_periodo '01/01/2017', '12/31/2018'
 
+-- Prueba vehículo más rentable
+Mas_Rentable
+

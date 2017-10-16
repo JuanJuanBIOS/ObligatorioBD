@@ -368,3 +368,13 @@ else
 	from (select #TablaAux.*, Autos.anclaje, Autos.vehiculosimilar as auto_similar from #TablaAux left join Autos on #TablaAux.matricula=Autos.matricula)
 	as TablaAux2 left join Utilitarios on TablaAux2.matricula=Utilitarios.matricula
 	end
+
+go
+
+create procedure Mas_Rentable
+as
+begin
+select Vehiculos.matricula, Vehiculos.Marca, Vehiculos.modelo, Mayorreacudacion.total from Vehiculos 
+inner join (select top 1 vehiculo as matricula, sum(costo) as total from Alquileres group by vehiculo order by sum(costo) desc) as Mayorreacudacion 
+on Vehiculos.matricula = Mayorreacudacion.matricula
+end
