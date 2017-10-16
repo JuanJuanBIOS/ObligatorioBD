@@ -371,9 +371,11 @@ else
 
 go
 
+-- Se crea procedimiento para encontrar el vehículo más rentable
 create procedure Mas_Rentable
 as
 begin
+-- Se selecciona de la tabla vehículos el vehículo más rentable
 select Vehiculos.matricula, Vehiculos.Marca, Vehiculos.modelo, Mayorreacudacion.total from Vehiculos 
 inner join (select top 1 vehiculo as matricula, sum(costo) as total from Alquileres group by vehiculo order by sum(costo) desc) as Mayorreacudacion 
 on Vehiculos.matricula = Mayorreacudacion.matricula
